@@ -1,7 +1,10 @@
 FROM python:3.10
 
+LABEL org.opencontainers.image.description="Built with multi-architecture support (amd64 + arm64). No code changes from 0.1.0."
+
+
 WORKDIR /app
-ADD . /app
+COPY . /app
 
 RUN pip install poetry
 
