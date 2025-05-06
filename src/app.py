@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 
-from src.model_logic import ModelLogic
+from model_logic import ModelLogic
 
 model = ModelLogic(
-    '../model/c2_Classifier_Sentiment_Model',
-    '../model/c1_BoW_Sentiment_Model.pkl')
+    'model/c2_Classifier_Sentiment_Model',
+    'model/c1_BoW_Sentiment_Model.pkl')
 
 app = Flask(__name__)
 
@@ -32,4 +32,4 @@ def predict():
     return jsonify(prediction=prediction)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=106, debug=True)
+    app.run(host="0.0.0.0", port=8080, debug=True)
