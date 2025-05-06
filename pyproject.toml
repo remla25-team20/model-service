@@ -9,11 +9,12 @@ authors = [
     {name = "Team 20"}
 ]
 readme = "README.md"
+
 requires-python = ">=3.10"
 dependencies = [
     "flask (>=3.1.0,<4.0.0)",
     "joblib (>=1.5.0,<2.0.0)",
-    "lib-ml @ git+https://github.com/remla25-team20/lib-ml.git@v0.1.1"
+    "lib-ml @ git+https://github.com/remla25-team20/lib-ml.git@v0.1.2"
 ]
 
 
