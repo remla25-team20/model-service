@@ -11,16 +11,6 @@ class ModelLogic:
 
     def predict(self, review) -> int:
         processed_review = preprocessing._text_process(review)
-        print(f'processed_review = {processed_review}')
         processed_input = self.cv.transform([processed_review]).toarray()[0]
-        print(f'processed_input = {processed_input}')
         prediction = self.classifier.predict([processed_input])[0]
-        print(f'prediction = {prediction}')
         return int(prediction)
-
-if __name__ == '__main__':
-    model = ModelLogic(
-        '../model/c2_Classifier_Sentiment_Model',
-        '../model/c1_BoW_Sentiment_Model.pkl')
-    prediction_result = model.predict('the food was not bad')
-    print(prediction_result)
