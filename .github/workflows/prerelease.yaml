@@ -1,11 +1,10 @@
 name: Prerelease
-on: push
-#on: 
-#  push:
-#     branches:
-#     - main
-#    tags:
-#    - "v[0-9]+.[0-9]+.[0-9]+-beta*"
+on: 
+  push:
+    branches:
+    - main
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+-beta*"
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -37,4 +36,4 @@ jobs:
             --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.beta \
             --tag $IMG:${{ env.version_major }}.beta \
             .
-#       docker push --all-tags $IMG
+        docker push --all-tags $IMG
