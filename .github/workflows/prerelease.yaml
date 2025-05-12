@@ -1,8 +1,8 @@
 name: Prerelease
 on: 
   push:
-    branches:
-    - main
+#    branches:
+#    - main
     tags:
     - "v[0-9]+.[0-9]+.[0-9]+-beta*"
 jobs:
@@ -36,4 +36,4 @@ jobs:
             --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.beta \
             --tag $IMG:${{ env.version_major }}.beta \
             .
-        docker push --all-tags $IMG
+#       docker push --all-tags $IMG
