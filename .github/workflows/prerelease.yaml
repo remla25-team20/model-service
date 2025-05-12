@@ -1,16 +1,18 @@
 name: Prerelease
 on: 
   push:
-    branches:
-    - main
     tags:
     - "v[0-9]+.[0-9]+.[0-9]+-beta*"
 jobs:
   build:
+    permissions: write-all
     runs-on: ubuntu-24.04
     steps:
     - name: Checkout step
       uses: actions/checkout@v4
+    - name: Exit if not on main branch
+      if: endsWith(github.ref, "main") == false
+      run: exit -1
     - name: Docker login step
       uses: docker/login-action@v3
       with:
