@@ -1,0 +1,39 @@
+name: Prerelease
+on: 
+  push:
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+-beta*"
+jobs:
+  build:
+    permissions: write-all
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout step
+      uses: actions/checkout@v4
+    - name: Docker login step
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Parse version info from tag
+      run: |
+        VERSION=${GITHUB_REF:11}
+        MAJOR=$(echo "$VERSION" | cut -d - -f 1 | cut -d . -f 1)
+        MINOR=$(echo "$VERSION" | cut -d - -f 1 | cut -d . -f 2)
+        PATCH=$(echo "$VERSION" | cut -d - -f 1 | cut -d . -f 3)
+        echo "version=$VERSION" >> $GITHUB_ENV
+        echo "version_major=$MAJOR" >> $GITHUB_ENV
+        echo "version_minor=$MINOR" >> $GITHUB_ENV
+        echo "version_patch=$PATCH" >> $GITHUB_ENV
+    - name: Make Prerelease
+      run: |
+        IMG="ghcr.io/${{github.repository}}"
+        IMG="${IMG@L}" # lower case the image
+        docker build \
+            --tag $IMG:${{ env.version }} \
+            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.${{ env.version_patch }}.beta.latest \
+            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.beta.latest \
+            --tag $IMG:${{ env.version_major }}.beta.latest \
+            .
+        docker push --all-tags $IMG
