@@ -34,8 +34,9 @@ jobs:
         IMG="ghcr.io/${{github.repository}}"
         IMG="${IMG@L}" # lower case the image
         docker build \
-            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.${{ env.version_patch }}.beta \
-            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.beta \
-            --tag $IMG:${{ env.version_major }}.beta \
+            --tag $IMG:${{ env.version }} \
+            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.${{ env.version_patch }}.beta.latest \
+            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.beta.latest \
+            --tag $IMG:${{ env.version_major }}.beta.latest \
             .
         docker push --all-tags $IMG
