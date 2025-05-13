@@ -10,5 +10,5 @@ jobs:
 
     - name: Update version
       run: |
-        v=${{ vars.version_patch:-0}}
+        v=${{ vars.version_patch }}
         ${{ vars.version_patch }} = ${v+1}
