@@ -5,7 +5,6 @@ on:
     - "v[0-9]+.[0-9]+.[0-9]+-beta*"
 jobs:
   build:
-    permissions: write-all
     runs-on: ubuntu-24.04
     steps:
     - name: Checkout step
@@ -34,7 +33,7 @@ jobs:
         IMG="ghcr.io/${{github.repository}}"
         IMG="${IMG@L}" # lower case the image
         docker build \
-            --tag $IMG:${{ env.version }}.beta \
+            --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.${{ env.version_patch }}.beta \
             --tag $IMG:${{ env.version_major }}.${{ env.version_minor }}.beta \
             --tag $IMG:${{ env.version_major }}.beta \
             .
