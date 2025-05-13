@@ -10,4 +10,5 @@ jobs:
 
     - name: Update version
       run: |
-        ${{ vars.version_patch = $vars.version_patch + 1}}
+        v=$($vars.version_patch + 1)
+        gh variable set version_patch --body ${v}
