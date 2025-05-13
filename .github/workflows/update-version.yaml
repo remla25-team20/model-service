@@ -1,0 +1,14 @@
+name: Prerelease
+on: push
+jobs:
+  increment:
+    permissions: write-all
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Checkout step
+      uses: actions/checkout@v4
+
+    - name: Update version
+      run: |
+        v=${{ vars.version_patch :-0}}
+        ${{ vars.version_patch }} = $(v+1)
