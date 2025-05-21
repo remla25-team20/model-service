@@ -107,7 +107,7 @@ files = [
 
 [[package]]
 name = "lib-ml"
-version = "0.1.1"
+version = "0.1.5"
 description = ""
 optional = false
 python-versions = ">=3.10"
@@ -125,8 +125,8 @@ scikit-learn = ">=1.6.1,<2.0.0"
 [package.source]
 type = "git"
 url = "https://github.com/remla25-team20/lib-ml.git"
-reference = "v0.1.1"
-resolved_reference = "6c408549e9d05f5b17f4d699a38d38ebebf487c3"
+reference = "v0.1.5"
+resolved_reference = "d6f47b5fd73c6636661c53789876579f5be4437f"
 
 [[package]]
 name = "markupsafe"
@@ -376,6 +376,21 @@ spss = ["pyreadstat (>=1.2.0)"]
 sql-other = ["SQLAlchemy (>=2.0.0)", "adbc-driver-postgresql (>=0.8.0)", "adbc-driver-sqlite (>=0.8.0)"]
 test = ["hypothesis (>=6.46.1)", "pytest (>=7.3.2)", "pytest-xdist (>=2.2.0)"]
 xml = ["lxml (>=4.9.2)"]
+
+[[package]]
+name = "prometheus-client"
+version = "0.22.0"
+description = "Python client for the Prometheus monitoring system."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "prometheus_client-0.22.0-py3-none-any.whl", hash = "sha256:c8951bbe64e62b96cd8e8f5d917279d1b9b91ab766793f33d4dce6c228558713"},
+    {file = "prometheus_client-0.22.0.tar.gz", hash = "sha256:18da1d2241ac2d10c8d2110f13eedcd5c7c0c8af18c926e8731f04fc10cd575c"},
+]
+
+[package.extras]
+twisted = ["twisted"]
 
 [[package]]
 name = "python-dateutil"
@@ -706,4 +721,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "312c97e7270fa1818f2217bd9b2a01d299cc2b326d9d8cbc65a02e1942be4e8c"
+content-hash = "dad56e36ac4479fb37e177b72725899d6958ec8f0cb2023ccadf484f2ae20a64"
