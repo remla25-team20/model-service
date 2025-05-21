@@ -3,7 +3,7 @@ package-mode = false
 
 [project]
 name = "model-service"
-version = "0.1.0"
+version = "0.1.2"
 description = "The model-service represents a wrapper service for the released ML model. It has a REST API to expose the model to other components."
 authors = [
     {name = "Team 20"}
@@ -14,7 +14,7 @@ requires-python = ">=3.10"
 dependencies = [
     "flask (>=3.1.0,<4.0.0)",
     "joblib (>=1.5.0,<2.0.0)",
-    "lib-ml @ git+https://github.com/remla25-team20/lib-ml.git@v0.1.2",
+    "lib-ml @ git+https://github.com/remla25-team20/lib-ml.git@v0.1.5",
     "prometheus_client (>=0.20.0,<1.0.0)"
 
 ]
