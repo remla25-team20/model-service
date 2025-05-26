@@ -6,6 +6,9 @@ env:
   IMG: ghcr.io/${{github.repository}}
 jobs:
   build:
+    permissions:
+      contents: read
+      packages: write
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
