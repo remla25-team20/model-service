@@ -15,6 +15,7 @@ ENV POETRY_NO_INTERACTION=1 \
 
 RUN poetry update
 RUN poetry install --only=main && rm -rf $POETRY_CACHE_DIR
+RUN poetry run python -m lib_ml.preprocessing
 
 EXPOSE 8080
 
