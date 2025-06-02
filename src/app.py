@@ -10,6 +10,18 @@ frontend_events_total = Counter(
     ['event']  # label: event type
 )
 
+reviews_started = Counter(
+    'reviews_started_total',
+    'Total number of users who started writing a review',
+    ['version']
+)
+
+reviews_submitted = Counter(
+    'reviews_submitted_total',
+    'Total number of users who submitted a review',
+    ['version']
+)
+
 model = ModelLogic(
     'model/c2_Classifier_Sentiment_Model',
     'model/c1_BoW_Sentiment_Model.pkl')
@@ -50,6 +62,18 @@ def log_metric():
         frontend_events_total.labels(event=event).inc()
         return "", 204
     return jsonify({"error": "Missing event field"}), 400
+
+@app.route("/metrics/review-started", methods=['POST'])
+def review_started():
+    data = request.json
+    reviews_started.labels(version=data.get('version', 'unknown')).inc()
+    return '', 204
+
+@app.route("/metrics/review-submitted", methods=['POST'])
+def review_submitted():
+    data = request.json
+    reviews_submitted.labels(version=data.get('version', 'unknown')).inc()
+    return '', 204
 
 @app.route("/metrics")
 def metrics():
