@@ -13,6 +13,18 @@ submit_click_total = Counter(
     "Total number of times the Submit button is clicked"
 )
 
+reviews_started = Counter(
+    'reviews_started_total',
+    'Total number of users who started writing a review',
+    ['version']
+)
+
+reviews_submitted = Counter(
+    'reviews_submitted_total',
+    'Total number of users who submitted a review',
+    ['version']
+)
+
 prediction_success_total = Counter(
     "prediction_success_total",
     "Total number of successful predictions"
@@ -89,6 +101,18 @@ def log_metric():
         EVENT_TO_COUNTER[event].inc()
         return "", 204
     return jsonify({"error": "Unknown or missing event"}), 400
+
+@app.route("/metrics/review-started", methods=['POST'])
+def review_started():
+    data = request.json
+    reviews_started.labels(version=data.get('version', 'unknown')).inc()
+    return '', 204
+
+@app.route("/metrics/review-submitted", methods=['POST'])
+def review_submitted():
+    data = request.json
+    reviews_submitted.labels(version=data.get('version', 'unknown')).inc()
+    return '', 204
 
 @app.route("/metrics")
 def metrics():
