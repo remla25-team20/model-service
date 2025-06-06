@@ -4,6 +4,7 @@ from model_logic import ModelLogic
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import psutil, os, threading, time
 
+MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
 
 # ──────────────────────────
 # Metrics definitions
@@ -11,42 +12,42 @@ import psutil, os, threading, time
 submit_click_total = Counter(
     "submit_click_total",
     "Total number of times the Submit button is clicked",
-    ['version']
+    ['app_version', 'model_service_version']
 )
 
 reviews_started = Counter(
     'reviews_started_total',
     'Total number of users who started writing a review',
-    ['version']
+    ['app_version', 'model_service_version']
 )
 
 prediction_success_total = Counter(
     "prediction_success_total",
     "Total number of successful predictions",
-    ['version']
+    ['app_version', 'model_service_version']
 )
 
 prediction_error_total = Counter(
     "prediction_error_total",
     "Total number of failed predictions",
-    ['version']
+    ['app_version', 'model_service_version']
 )
 
 request_latency_seconds = Histogram(
     "request_latency_seconds",
     "Latency of the /predict endpoint in seconds",
-    ['version'],
+    ['app_version', 'model_service_version'],
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10)
 )
 model_cpu_percent = Gauge(
     "model_cpu_percent",
     "CPU usage of the model-service process (%)",
-    ['version']
+    ['app_version', 'model_service_version']
 )
 model_memory_rss_bytes = Gauge(
     "model_memory_rss_bytes",
     "Resident memory size (RSS) of the model-service process in bytes",
-    ['version']
+    ['app_version', 'model_service_version']
 )
 # ──────────────────────────
 # Flask application
@@ -102,9 +103,11 @@ def log_metric():
         app_version = request.cookies.get('version')
         app.logger.debug(f'version_cookie={app_version}')
         if app_version == None:
-            EVENT_TO_COUNTER[event].inc()
-        else:
-            EVENT_TO_COUNTER[event].labels(version=app_version).inc()
+            app_version = 'unknown'
+        EVENT_TO_COUNTER[event].labels(
+            model_service_version=MODEL_SERVICE_VERSION, 
+            app_version=app_version
+            ).inc()
         return "", 204
     return jsonify({"error": "Unknown or missing event"}), 400
 
@@ -120,9 +123,15 @@ def _resource_monitor():
     # First call to cpu_percent “starts” the measurement window
     proc.cpu_percent(interval=None)
     while True:
-        model_cpu_percent.set(proc.cpu_percent(interval=None))
-        model_memory_rss_bytes.set(proc.memory_info().rss)
-        time.sleep(5)           
+        model_cpu_percent.labels(
+            model_service_version=MODEL_SERVICE_VERSION, 
+            app_version='undefined'
+            ).set(proc.cpu_percent(interval=None))
+        model_memory_rss_bytes.labels(
+            model_service_version=MODEL_SERVICE_VERSION, 
+            app_version='undefined'
+            ).set(proc.memory_info().rss)
+        time.sleep(5)
         
 threading.Thread(target=_resource_monitor, daemon=True).start()
 
