@@ -76,12 +76,21 @@ def predict():
         schema:
           type: string
     """
+
+    app_version = request.cookies.get('version')
+    app.logger.debug(f'version_cookie={app_version}')
+    if app_version == None:
+        app_version = 'unknown'
+
     start = time.time()
     review = request.args['review']
     app.logger.debug(f'review={review}')
     prediction = model.predict(review)   
     app.logger.debug(f'prediction={prediction}')
-    request_latency_seconds.observe(time.time() - start)  # record latency
+    request_latency_seconds.labels(
+        model_service_version=MODEL_SERVICE_VERSION, 
+        app_version=app_version
+        ).observe(time.time() - start)  # record latency
     return jsonify(prediction=prediction)
 
 EVENT_TO_COUNTER = {
