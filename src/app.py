@@ -10,7 +10,8 @@ import psutil, os, threading, time
 # ──────────────────────────
 submit_click_total = Counter(
     "submit_click_total",
-    "Total number of times the Submit button is clicked"
+    "Total number of times the Submit button is clicked",
+    ['version']
 )
 
 reviews_started = Counter(
@@ -19,34 +20,33 @@ reviews_started = Counter(
     ['version']
 )
 
-reviews_submitted = Counter(
-    'reviews_submitted_total',
-    'Total number of users who submitted a review',
-    ['version']
-)
-
 prediction_success_total = Counter(
     "prediction_success_total",
-    "Total number of successful predictions"
+    "Total number of successful predictions",
+    ['version']
 )
 
 prediction_error_total = Counter(
     "prediction_error_total",
-    "Total number of failed predictions"
+    "Total number of failed predictions",
+    ['version']
 )
 
 request_latency_seconds = Histogram(
     "request_latency_seconds",
     "Latency of the /predict endpoint in seconds",
+    ['version'],
     buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10)
 )
 model_cpu_percent = Gauge(
     "model_cpu_percent",
-    "CPU usage of the model-service process (%)"
+    "CPU usage of the model-service process (%)",
+    ['version']
 )
 model_memory_rss_bytes = Gauge(
     "model_memory_rss_bytes",
-    "Resident memory size (RSS) of the model-service process in bytes"
+    "Resident memory size (RSS) of the model-service process in bytes",
+    ['version']
 )
 # ──────────────────────────
 # Flask application
@@ -87,6 +87,7 @@ EVENT_TO_COUNTER = {
     "frontend_submit_clicked": submit_click_total,
     "frontend_prediction_result": prediction_success_total,
     "frontend_prediction_error": prediction_error_total,
+    "frontend_review_started": reviews_started
 }
 
 @app.route("/log-metric", methods=["POST"])
@@ -98,21 +99,14 @@ def log_metric():
     data = request.get_json()
     event = data.get('event')
     if event in EVENT_TO_COUNTER:
-        EVENT_TO_COUNTER[event].inc()
+        app_version = request.cookies.get('version')
+        app.logger.debug(f'version_cookie={app_version}')
+        if app_version == None:
+            EVENT_TO_COUNTER[event].inc()
+        else:
+            EVENT_TO_COUNTER[event].labels(version=app_version).inc()
         return "", 204
     return jsonify({"error": "Unknown or missing event"}), 400
-
-@app.route("/metrics/review-started", methods=['POST'])
-def review_started():
-    data = request.json
-    reviews_started.labels(version=data.get('version', 'unknown')).inc()
-    return '', 204
-
-@app.route("/metrics/review-submitted", methods=['POST'])
-def review_submitted():
-    data = request.json
-    reviews_submitted.labels(version=data.get('version', 'unknown')).inc()
-    return '', 204
 
 @app.route("/metrics")
 def metrics():
