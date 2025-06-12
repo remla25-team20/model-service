@@ -54,8 +54,8 @@ model_memory_rss_bytes = Gauge(
 # ──────────────────────────
 
 model = ModelLogic(
-    'model/c2_Classifier_Sentiment_Model',
-    'model/c1_BoW_Sentiment_Model.pkl')
+    'model/Sentiment_Analysis_Model.joblib',
+    'model/Sentiment_Analysis_Preprocessor.joblib')
 
 app = Flask(__name__)
 
@@ -84,6 +84,8 @@ def predict():
 
     start = time.time()
     review = request.args['review']
+    print(f"The review is {review}")
+    print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
     prediction = model.predict(review)   
     app.logger.debug(f'prediction={prediction}')
