@@ -11,6 +11,6 @@ class ModelLogic:
 
     def predict(self, review) -> int:
         processed_review = preprocessing._text_process(review)
-        processed_input = self.cv.transform(processed_review).toarray()[0]
-        prediction = self.classifier.predict([processed_input])[0]
+        processed_input = self.cv.transform([" ".join(processed_review)]).toarray()
+        prediction = self.classifier.predict(processed_input)[0]
         return int(prediction)
