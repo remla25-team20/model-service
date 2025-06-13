@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify
 
 from model_logic import ModelLogic
+from lib_ml import preprocessing
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import psutil, os, threading, time
+import sys
+import requests
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
 
@@ -54,10 +57,36 @@ model_memory_rss_bytes = Gauge(
 # ──────────────────────────
 
 model = ModelLogic(
-    'model/Sentiment_Analysis_Model.joblib',
-    'model/Sentiment_Analysis_Preprocessor.joblib')
+    '/mnt/shared/Sentiment_Analysis_Model.joblib',
+    '/mnt/shared/Sentiment_Analysis_Preprocessor.joblib')
 
 app = Flask(__name__)
+
+
+def init_data():
+    version = sys.argv[1]           # if len(sys.argv) > 1 else "v0.1.6-beta"
+    print(version)
+    url_cv = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Preprocessor.joblib"
+    url_model = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Model.joblib"
+    
+    target_dir = "/mnt/shared/"
+    resp_cv = requests.get(url_cv)
+    resp_model = requests.get(url_model)
+    
+    if resp_cv.status_code != 200:
+        raise FileNotFoundError(f"Could not download CV file:\n{resp_cv.response}")
+    if resp_model.status_code != 200:
+        raise FileNotFoundError(f"Could not download Model file:\n{resp_model.response}")
+    
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    
+    with open(target_dir + "Sentiment_Analysis_Preprocessor.joblib", "wb+") as f_cv:
+        f_cv.write(resp_cv.content)
+    with open(target_dir + "Sentiment_Analysis_Model.joblib", "wb+") as f_model:
+        f_model.write(resp_model.content)
+    return
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -147,4 +176,5 @@ def _resource_monitor():
 threading.Thread(target=_resource_monitor, daemon=True).start()
 
 if __name__ == "__main__":
+    init_data()
     app.run(host="0.0.0.0", port=8080, debug=True)
