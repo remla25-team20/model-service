@@ -9,7 +9,7 @@ WORKDIR /app
 COPY . /app
 
 ADD "https://github.com/remla25-team20/model-training/releases/download/${MODEL_VERSION}/Sentiment_Analysis_Model.joblib" /app/model/Sentiment_Analysis_Model.joblib
-ADD "https://github.com/remla25-team20/model-training/releases/download/v0.1.6-beta/Sentiment_Analysis_Preprocessor.joblib" /app/model/Sentiment_Analysis_Preprocessor.joblib
+ADD "https://github.com/remla25-team20/model-training/releases/download/${MODEL_VERSION}/Sentiment_Analysis_Preprocessor.joblib" /app/model/Sentiment_Analysis_Preprocessor.joblib
 
 RUN pip install poetry
 
