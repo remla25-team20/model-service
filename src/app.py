@@ -64,27 +64,29 @@ app = Flask(__name__)
 
 
 def init_data():
-    version = sys.argv[1]           # if len(sys.argv) > 1 else "v0.1.6-beta"
-    print(version)
+    version = sys.argv[1] if len(sys.argv) > 1 else "v0.1.6-beta"
+
     url_cv = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Preprocessor.joblib"
     url_model = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Model.joblib"
     
     target_dir = "/mnt/shared/"
-    resp_cv = requests.get(url_cv)
-    resp_model = requests.get(url_model)
-    
-    if resp_cv.status_code != 200:
-        raise FileNotFoundError(f"Could not download CV file:\n{resp_cv.response}")
-    if resp_model.status_code != 200:
-        raise FileNotFoundError(f"Could not download Model file:\n{resp_model.response}")
+    fname_cv = "Sentiment_Analysis_Preprocessor.joblib"
+    fname_model = "Sentiment_Analysis_Model.joblib"
     
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
+        
+    def _download_file(url, target):
+        if os.path.isfile(target):
+            return
+        resp = requests.get(url)
+        if resp.status_code != 200:
+            raise FileNotFoundError(f"Could not download file at {url}")
+        with open(target, "wb+") as f:
+            f.write(resp.content)
     
-    with open(target_dir + "Sentiment_Analysis_Preprocessor.joblib", "wb+") as f_cv:
-        f_cv.write(resp_cv.content)
-    with open(target_dir + "Sentiment_Analysis_Model.joblib", "wb+") as f_model:
-        f_model.write(resp_model.content)
+    _download_file(url_cv, target_dir + fname_cv)
+    _download_file(url_model, target_dir + fname_model)
     return
 
 
