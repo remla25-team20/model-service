@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify
 
 from model_logic import ModelLogic
+from lib_ml import preprocessing
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import psutil, os, threading, time
+import sys
+import requests
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
 
@@ -53,11 +56,40 @@ model_memory_rss_bytes = Gauge(
 # Flask application
 # ──────────────────────────
 
-model = ModelLogic(
-    'model/c2_Classifier_Sentiment_Model',
-    'model/c1_BoW_Sentiment_Model.pkl')
+model = ModelLogic()
 
 app = Flask(__name__)
+
+
+def init_data(version):
+    url_cv = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Preprocessor.joblib"
+    url_model = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Model.joblib"
+    
+    target_dir = f"/mnt/shared/models/{version}/"
+    fname_cv = "Sentiment_Analysis_Preprocessor.joblib"
+    fname_model = "Sentiment_Analysis_Model.joblib"
+    
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+        
+    def _download_file(url, target):
+        if os.path.isfile(target):
+            return
+        resp = requests.get(url)
+        if resp.status_code != 200:
+            raise FileNotFoundError(f"Could not download file at {url}")
+        with open(target, "wb+") as f:
+            f.write(resp.content)
+    
+    _download_file(url_cv, target_dir + fname_cv)
+    _download_file(url_model, target_dir + fname_model)
+    
+    model.set_classifier_path(target_dir + fname_model)
+    model.set_cv_path(target_dir + fname_cv)
+    
+    model.initialize_models()
+    return
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -84,6 +116,8 @@ def predict():
 
     start = time.time()
     review = request.args['review']
+    print(f"The review is {review}")
+    print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
     prediction = model.predict(review)   
     app.logger.debug(f'prediction={prediction}')
@@ -145,4 +179,7 @@ def _resource_monitor():
 threading.Thread(target=_resource_monitor, daemon=True).start()
 
 if __name__ == "__main__":
+    version = sys.argv[1] if len(sys.argv) > 1 else "v0.1.6-beta"
+    init_data(version)
     app.run(host="0.0.0.0", port=8080, debug=True)
+
