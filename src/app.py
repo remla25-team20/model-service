@@ -3,11 +3,13 @@ from flask import Flask, request, jsonify
 from model_logic import ModelLogic
 from lib_ml import preprocessing
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
-import psutil, os, threading, time
+import psutil, os, threading, time, csv
 import sys
 import requests
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
+USER_FEEDBACK_DIR = 'user-feedback-data'
+USER_FEEDBACK_PATH = f'{USER_FEEDBACK_DIR}/user_feedback.csv'
 
 # ──────────────────────────
 # Metrics definitions
@@ -126,6 +128,32 @@ def predict():
         app_version=app_version
         ).observe(time.time() - start)  # record latency
     return jsonify(prediction=prediction)
+
+@app.route("/feedback", methods=["POST"])
+def store_user_feedback():
+    """
+    Write user feedback regarding the correctness of the prediction to a csv file.
+    The data can be exported later to retrain/improve the model.
+    Expected JSON body: {
+      "reviewText": <String>
+      "prediction": <1|0>
+      "isPredictionCorrect": <True|False>
+      }
+    """
+    data = request.get_json()
+    review_text, prediction, isPredictionCorrect = data.get('reviewText'), data.get('prediction'), data.get('isPredictionCorrect')
+    
+    if not os.path.exists(USER_FEEDBACK_DIR):
+        os.mkdir(USER_FEEDBACK_DIR)
+
+    write_header = not os.path.exists(USER_FEEDBACK_PATH) or os.path.getsize(USER_FEEDBACK_PATH) == 0
+    with open(USER_FEEDBACK_PATH, 'a', newline='') as feedback_file:
+        writer = csv.writer(feedback_file)
+        if write_header:
+            writer.writerow(['review_text','prediction','isPredictionCorrect'])
+
+        writer.writerow([review_text, prediction, isPredictionCorrect])
+    return "Feedback successfully collected.", 204
 
 EVENT_TO_COUNTER = {
     "frontend_submit_clicked": submit_click_total,

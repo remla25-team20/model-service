@@ -1,0 +1,6 @@
+# auto-generated files
+src/__pycache__
+model/.DS_Store
+.idea
+
+feedback-data/
