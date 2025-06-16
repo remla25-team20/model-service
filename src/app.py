@@ -6,9 +6,10 @@ from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTEN
 import psutil, os, threading, time, csv
 import sys
 import requests
+import fcntl
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
-USER_FEEDBACK_DIR = 'user-feedback-data'
+USER_FEEDBACK_DIR = '/mnt/shared/user-feedback-data'
 USER_FEEDBACK_PATH = f'{USER_FEEDBACK_DIR}/user_feedback.csv'
 
 # ──────────────────────────
@@ -146,13 +147,15 @@ def store_user_feedback():
     if not os.path.exists(USER_FEEDBACK_DIR):
         os.mkdir(USER_FEEDBACK_DIR)
 
-    write_header = not os.path.exists(USER_FEEDBACK_PATH) or os.path.getsize(USER_FEEDBACK_PATH) == 0
     with open(USER_FEEDBACK_PATH, 'a', newline='') as feedback_file:
+        # lock file while writing so multiple pods on same node don't overwrite each other
+        fcntl.flock(feedback_file, fcntl.LOCK_EX)
         writer = csv.writer(feedback_file)
-        if write_header:
+        # write header first time
+        if (not os.path.exists(USER_FEEDBACK_PATH) or os.path.getsize(USER_FEEDBACK_PATH) == 0):
             writer.writerow(['review_text','prediction','isPredictionCorrect'])
-
         writer.writerow([review_text, prediction, isPredictionCorrect])
+        fcntl.flock(feedback_file, fcntl.LOCK_UN)
     return "Feedback successfully collected.", 204
 
 EVENT_TO_COUNTER = {
