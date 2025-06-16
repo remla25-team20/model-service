@@ -3,11 +3,14 @@ from flask import Flask, request, jsonify
 from model_logic import ModelLogic
 from lib_ml import preprocessing
 from prometheus_client import Counter, Gauge, Histogram, generate_latest, CONTENT_TYPE_LATEST
-import psutil, os, threading, time
+import psutil, os, threading, time, csv
 import sys
 import requests
+import fcntl
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
+USER_FEEDBACK_DIR = '/mnt/shared/user-feedback-data'
+USER_FEEDBACK_PATH = f'{USER_FEEDBACK_DIR}/user_feedback.csv'
 
 # ──────────────────────────
 # Metrics definitions
@@ -126,6 +129,34 @@ def predict():
         app_version=app_version
         ).observe(time.time() - start)  # record latency
     return jsonify(prediction=prediction)
+
+@app.route("/feedback", methods=["POST"])
+def store_user_feedback():
+    """
+    Write user feedback regarding the correctness of the prediction to a csv file.
+    The data can be exported later to retrain/improve the model.
+    Expected JSON body: {
+      "reviewText": <String>
+      "prediction": <1|0>
+      "isPredictionCorrect": <True|False>
+      }
+    """
+    data = request.get_json()
+    review_text, prediction, isPredictionCorrect = data.get('reviewText'), data.get('prediction'), data.get('isPredictionCorrect')
+    
+    if not os.path.exists(USER_FEEDBACK_DIR):
+        os.mkdir(USER_FEEDBACK_DIR)
+
+    with open(USER_FEEDBACK_PATH, 'a', newline='') as feedback_file:
+        # lock file while writing so multiple pods on same node don't overwrite each other
+        fcntl.flock(feedback_file, fcntl.LOCK_EX)
+        writer = csv.writer(feedback_file)
+        # write header first time
+        if (not os.path.exists(USER_FEEDBACK_PATH) or os.path.getsize(USER_FEEDBACK_PATH) == 0):
+            writer.writerow(['review_text','prediction','isPredictionCorrect'])
+        writer.writerow([review_text, prediction, isPredictionCorrect])
+        fcntl.flock(feedback_file, fcntl.LOCK_UN)
+    return "Feedback successfully collected.", 204
 
 EVENT_TO_COUNTER = {
     "frontend_submit_clicked": submit_click_total,
