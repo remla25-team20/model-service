@@ -39,6 +39,18 @@ prediction_error_total = Counter(
     ['app_version', 'model_service_version']
 )
 
+word_count_raw = Counter(
+    "word_count_raw",
+    "Total number of non-stop words submitted",
+    ['app_version', 'model_service_version']
+)
+
+word_count_encoded = Counter(
+    "word_count_encoded",
+    "Total number of words successfully encoded",
+    ['app_version', 'model_service_version']
+)
+
 request_latency_seconds = Histogram(
     "request_latency_seconds",
     "Latency of the /predict endpoint in seconds",
@@ -122,12 +134,25 @@ def predict():
     print(f"The review is {review}")
     print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
-    prediction = model.predict(review)   
+    
+    wc_raw, wc_encoded, prediction = model.predict(review)   
+    
     app.logger.debug(f'prediction={prediction}')
+    
+    # Record metrics
     request_latency_seconds.labels(
         model_service_version=MODEL_SERVICE_VERSION, 
         app_version=app_version
         ).observe(time.time() - start)  # record latency
+    word_count_raw.labels(
+        model_service_version=MODEL_SERVICE_VERSION,
+        app_version=app_version
+        ).inc(wc_raw)               # record non-stop word word count
+    word_count_encoded.labels(
+        model_service_version=MODEL_SERVICE_VERSION,
+        app_version=app_version
+        ).inc(wc_encoded)           # record encoded word count
+    
     return jsonify(prediction=prediction)
 
 @app.route("/feedback", methods=["POST"])
