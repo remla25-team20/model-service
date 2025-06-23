@@ -142,7 +142,7 @@ def set_model():
         return jsonify({"error": "Failed to initialize model"}), 500
     
     app.logger.info(f"Switched to model version {version}")
-    return jsonify({"message": f"Switched to model version {version}"}),
+    return jsonify({"message": f"Switched to model version {version}"})
 
 @app.route("/predict", methods=["POST"])
 def predict():
