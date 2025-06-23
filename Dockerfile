@@ -1,8 +1,5 @@
 FROM python:3.10
 
-ARG MODEL_VERSION="v0.1.6-beta"
-ENV MODEL_VERSION=${MODEL_VERSION}
-
 LABEL org.opencontainers.image.description="Built with multi-architecture support (amd64 + arm64). No code changes from 0.1.0."
 
 
