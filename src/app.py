@@ -78,7 +78,7 @@ def init_data():
         url_cvs = [release['assets'][1]['browser_download_url'] for release in releases if len(release['assets']) > 1]
         return zip(version, url_models, url_cvs)
 
-    models = fetch_releases()
+    models = list(fetch_releases())
     for version, url_model, url_cv in models:
 
         target_dir = f"/mnt/shared/models/{version}/"
