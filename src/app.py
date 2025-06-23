@@ -118,6 +118,32 @@ def init_data():
     model.initialize_models()
     return
 
+@app.route("/set-model", methods=["POST"])
+def set_model():
+    """
+    Endpoint to switch the model version.
+    Expected JSON body: { "version": "<model_version>" }
+    """
+    data = request.get_json()
+    version = data.get('version')
+    if not version:
+        return jsonify({"error": "Version parameter is required"}), 400
+    
+    target_dir = f"/mnt/shared/models/{version}/"
+    if not os.path.exists(target_dir):
+        return jsonify({"error": f"Model version {version} not found"}), 404
+    
+    fname_cv = "Sentiment_Analysis_Preprocessor.joblib"
+    fname_model = "Sentiment_Analysis_Model.joblib"
+
+    model.set_classifier_path(target_dir + fname_model)
+    model.set_cv_path(target_dir + fname_cv)
+    if not model.initialize_models():
+        return jsonify({"error": "Failed to initialize model"}), 500
+    
+    app.logger.info(f"Switched to model version {version}")
+    return jsonify({"message": f"Switched to model version {version}"}),
+
 @app.route("/predict", methods=["POST"])
 def predict():
     """
@@ -230,7 +256,7 @@ def _resource_monitor():
             app_version='undefined'
             ).set(proc.memory_info().rss)
         time.sleep(5)
-        
+
 threading.Thread(target=_resource_monitor, daemon=True).start()
 
 if __name__ == "__main__":
