@@ -9,7 +9,6 @@ import requests
 import fcntl
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
-GITHUB_PAT = os.getenv("GITHUB_PAT", None)
 USER_FEEDBACK_DIR = '/mnt/shared/user-feedback-data'
 USER_FEEDBACK_PATH = f'{USER_FEEDBACK_DIR}/user_feedback.csv'
 
@@ -69,9 +68,6 @@ def init_data():
 
     def fetch_releases():
         url = "https://api.github.com/repos/remla25-team20/model-training/releases"
-        
-        if GITHUB_PAT is None:
-            raise Exception("GITHUB_PAT environment variable is not set.")
 
         headers = {
             "Accept": "application/vnd.github+json",
