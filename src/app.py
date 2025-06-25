@@ -140,7 +140,6 @@ def set_model():
     Responses:
         200:
             description: Successfully switched to the specified model version.
-
         400:
             description: Missing or invalid version parameter.
         404:
