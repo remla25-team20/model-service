@@ -119,6 +119,10 @@ def init_data():
         models[version] = model
     return
 
+@app.route("/model-versions", methods=["GET"])
+def get_model_versions():
+    return jsonify(modelVersions=list(models.keys()))
+
 @app.route("/predict", methods=["POST"])
 def predict():
     """
