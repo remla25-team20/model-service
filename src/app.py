@@ -76,7 +76,7 @@ def init_data():
 
         headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {GITHUB_PAT}",
+            # "Authorization": f"Bearer {GITHUB_PAT}",
             "X-GitHub-Api-Version": "2022-11-28",
         }
         resp = requests.get(url, headers=headers)
@@ -86,6 +86,9 @@ def init_data():
         
         releases = resp.json()
         version = [release['tag_name'] for release in releases]
+
+        print(f'got model releases from GH: {version}')
+
         url_models = [release['assets'][0]['browser_download_url'] for release in releases if release['assets']]
         url_cvs = [release['assets'][1]['browser_download_url'] for release in releases if len(release['assets']) > 1]
         return zip(version, url_models, url_cvs)
