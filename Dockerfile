@@ -2,7 +2,6 @@ FROM python:3.10
 
 LABEL org.opencontainers.image.description="Built with multi-architecture support (amd64 + arm64). No code changes from 0.1.0."
 
-
 WORKDIR /app
 COPY . /app
 
@@ -18,4 +17,4 @@ RUN poetry install --only=main && rm -rf $POETRY_CACHE_DIR
 
 EXPOSE 8080
 
-CMD poetry run python src/app.py $MODEL_VERSION
+CMD poetry run python src/app.py
