@@ -149,16 +149,12 @@ def predict():
     start = time.time()
     review = request.args['review']
     model_version = request.args['modelVersion']
-
-    # app.logger.debug(f"/predict: MODEL_VERSION={model_version}")
-
+    app.logger.debug(f"/predict: MODEL_VERSION={model_version}")
     print(f"The review is {review}")
     print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
     prediction = models[model_version].predict(review)
-
-    # app.logger.debug(f"the prediction using the selected model version is {prediction}")
-
+    app.logger.debug(f"the prediction using the selected model version is {prediction}")
     app.logger.debug(f'prediction={prediction}')
     request_latency_seconds.labels(
         model_service_version=MODEL_SERVICE_VERSION, 
