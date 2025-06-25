@@ -121,18 +121,42 @@ def init_data():
 @app.route("/set-model", methods=["POST"])
 def set_model():
     """
-    Endpoint to switch the model version.
-    Expected JSON body: { "version": "<model_version>" }
+    Switch the model version used by the service.
+
+    Summary:
+        Updates the model version based on the provided version parameter.
+
+    Parameters:
+        - in: body
+            name: version
+            required: true
+            schema:
+                type: object
+                properties:
+                    version:
+                        type: string
+                        description: The version of the model to switch to.
+
+    Responses:
+        200:
+            description: Successfully switched to the specified model version.
+
+        400:
+            description: Missing or invalid version parameter.
+        404:
+            description: Model version not found.
+        500:
+            description: Failed to initialize the model with the new version.
     """
     data = request.get_json()
     version = data.get('version')
     if not version:
         return jsonify({"error": "Version parameter is required"}), 400
-    
+
     target_dir = f"/mnt/shared/models/{version}/"
     if not os.path.exists(target_dir):
         return jsonify({"error": f"Model version {version} not found"}), 404
-    
+
     fname_cv = "Sentiment_Analysis_Preprocessor.joblib"
     fname_model = "Sentiment_Analysis_Model.joblib"
 
@@ -140,7 +164,7 @@ def set_model():
     model.set_cv_path(target_dir + fname_cv)
     if not model.initialize_models():
         return jsonify({"error": "Failed to initialize model"}), 500
-    
+
     app.logger.info(f"Switched to model version {version}")
     return jsonify({"message": f"Switched to model version {version}"})
 
