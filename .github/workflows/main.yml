@@ -29,6 +29,10 @@ jobs:
         run: |
           PRIOR_COMMIT=$(git rev-parse HEAD^)
           TAG=$(git tag --points-at $PRIOR_COMMIT | sort -r | head -n 1)
+          if [[ -z "$TAG" ]]; then 
+          echo "No prior tag found. Defaulting to Poetry tag..."
+          TAG=$(poetry version --short | sed 's/+/-/')
+          fi
           echo "version=$TAG" >> $GITHUB_OUTPUT
           
       - name: Bump pre-release version
