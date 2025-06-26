@@ -3,7 +3,7 @@ package-mode = false
 
 [project]
 name = "model-service"
-version = "0.2.1-beta"
+version = "0.2.1+feature-release-workflow.1"
 description = "The model-service represents a wrapper service for the released ML model. It has a REST API to expose the model to other components."
 authors = [
     {name = "Team 20"}

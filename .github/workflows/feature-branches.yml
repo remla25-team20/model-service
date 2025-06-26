@@ -43,6 +43,21 @@ jobs:
           echo "version=$FEATURE_VERSION" >> $GITHUB_OUTPUT
           git tag $FEATURE_VERSION
           git push origin --tags
+          
+      - name: Commit pre-release bump and also tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "bump feature branch version to ${{ steps.feature-version.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git tag ${{ steps.feature-version.outputs.version }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          tags: true
   
   publish-branch-prerelease:
     needs: create-branch-tag
