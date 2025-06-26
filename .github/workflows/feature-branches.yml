@@ -1,0 +1,54 @@
+name: CI and create feature tags
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  create-branch-tag:
+    runs-on: ubuntu-24.04
+    needs: ci
+    
+    outputs:
+      version: ${{ steps.feature-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+      - name: Make version calculation script executable
+        run: |
+          chmod -x scripts/generate_new_version.sh
+      
+      - name: Extract branch name
+        id: branch
+        run: |
+          # Extract PR source branch name and sanitize
+          RAW_BRANCH="${{ github.head_ref }}"
+          echo "$RAW_BRANCH"
+          SANITIZED_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+          echo "$SANITIZED_BRANCH"
+          echo "branch=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        id: feature-version
+        run: |
+          OLD_VERSION=$(poetry version --short)
+          FEATURE_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION ${{ steps.branch.outputs.branch }})
+          poetry version $FEATURE_VERSION
+          echo "version=$FEATURE_VERSION" >> $GITHUB_OUTPUT
+          git tag $FEATURE_VERSION
+          git push origin --tags
+  
+  publish-branch-prerelease:
+    needs: create-branch-tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.create-branch-tag.outputs.version }}
+    secrets: inherit
+
