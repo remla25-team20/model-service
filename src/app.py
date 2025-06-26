@@ -129,6 +129,27 @@ def init_data():
 
 @app.route("/model-versions", methods=["GET"])
 def get_model_versions():
+    """
+    Get available model versions.
+
+    Summary:
+        Returns a list of model version identifiers currently available for inference.
+
+    Parameters:
+        None
+
+    Responses:
+        200:
+            description: A JSON object containing the list of available model versions.
+            schema:
+                type: object
+                properties:
+                    modelVersions:
+                        type: array
+                        items:
+                            type: string
+                        description: List of model version identifiers.
+    """
     return jsonify(modelVersions=list(models.keys()))
 
 @app.route("/predict", methods=["POST"])
@@ -137,7 +158,7 @@ def predict():
     Predict sentiment based on the submitted review text.
 
     Summary:
-        Accepts a review text as input and returns the sentiment prediction result.
+        Accepts a review text and model version as input and returns a sentiment prediction.
 
     Parameters:
         - name: review
@@ -145,6 +166,11 @@ def predict():
           type: string
           required: true
           description: The user's review text to be analyzed.
+        - name: modelVersion
+          in: query
+          type: string
+          required: true
+          description: The version of the model to be used for prediction.
 
     Responses:
         200:
@@ -154,7 +180,7 @@ def predict():
                 properties:
                     prediction:
                         type: string
-                        description: The predicted label (e.g., '1' for positive, '0' for negative)
+                        description: The predicted label (e.g., '1' for positive, '0' for negative).
         400:
             description: Missing or invalid input.
     """
