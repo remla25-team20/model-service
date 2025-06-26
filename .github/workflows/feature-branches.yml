@@ -41,8 +41,6 @@ jobs:
           FEATURE_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION ${{ steps.branch.outputs.branch }})
           poetry version $(echo $FEATURE_VERSION | sed 's/-/+/')    # PEP440 compliance
           echo "version=$FEATURE_VERSION" >> $GITHUB_OUTPUT
-          git tag $FEATURE_VERSION
-          git push origin --tags
           
       - name: Commit pre-release bump and also tag
         run: |
