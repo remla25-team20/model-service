@@ -39,6 +39,18 @@ prediction_error_total = Counter(
     ['app_version', 'model_service_version']
 )
 
+word_count_raw = Counter(
+    "word_count_raw",
+    "Total number of non-stop words submitted",
+    ['app_version', 'model_service_version']
+)
+
+word_count_encoded = Counter(
+    "word_count_encoded",
+    "Total number of words successfully encoded",
+    ['app_version', 'model_service_version']
+)
+
 request_latency_seconds = Histogram(
     "request_latency_seconds",
     "Latency of the /predict endpoint in seconds",
@@ -122,19 +134,29 @@ def get_model_versions():
 @app.route("/predict", methods=["POST"])
 def predict():
     """
-    Endpoint for making predictions.
-    ---
-    parameters:
-      - name: review
-        in: query
-        type: string
-        required: true
-        description: The URL of the input data.
-    responses:
-      200:
-        description: The predicted review type.
-        schema:
+    Predict sentiment based on the submitted review text.
+
+    Summary:
+        Accepts a review text as input and returns the sentiment prediction result.
+
+    Parameters:
+        - name: review
+          in: query
           type: string
+          required: true
+          description: The user's review text to be analyzed.
+
+    Responses:
+        200:
+            description: A JSON object with the prediction result.
+            schema:
+                type: object
+                properties:
+                    prediction:
+                        type: string
+                        description: The predicted label (e.g., '1' for positive, '0' for negative)
+        400:
+            description: Missing or invalid input.
     """
 
     app_version = request.cookies.get('version')
@@ -149,25 +171,57 @@ def predict():
     print(f"The review is {review}")
     print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
-    prediction = models[model_version].predict(review)
-    app.logger.debug(f"the prediction using the selected model version is {prediction}")
+
+    wc_raw, wc_encoded, prediction = models[model_version].predict(review)   
+ 
     app.logger.debug(f'prediction={prediction}')
+    
+    # Record metrics
     request_latency_seconds.labels(
         model_service_version=MODEL_SERVICE_VERSION, 
         app_version=app_version
         ).observe(time.time() - start)  # record latency
+    word_count_raw.labels(
+        model_service_version=MODEL_SERVICE_VERSION,
+        app_version=app_version
+        ).inc(wc_raw)               # record non-stop word word count
+    word_count_encoded.labels(
+        model_service_version=MODEL_SERVICE_VERSION,
+        app_version=app_version
+        ).inc(wc_encoded)           # record encoded word count
+    
     return jsonify(prediction=prediction)
 
 @app.route("/feedback", methods=["POST"])
 def store_user_feedback():
     """
-    Write user feedback regarding the correctness of the prediction to a csv file.
-    The data can be exported later to retrain/improve the model.
-    Expected JSON body: {
-      "reviewText": <String>
-      "prediction": <1|0>
-      "isPredictionCorrect": <True|False>
-      }
+    Submit user feedback about the correctness of the prediction.
+
+    Summary:
+        Stores feedback used for model improvement and retraining.
+
+    Parameters:
+        - in: body
+          name: feedback
+          required: true
+          schema:
+              type: object
+              properties:
+                  reviewText:
+                      type: string
+                      description: Original review text.
+                  prediction:
+                      type: integer
+                      description: The predicted label (0 or 1).
+                  isPredictionCorrect:
+                      type: boolean
+                      description: Whether the prediction was correct.
+
+    Responses:
+        204:
+            description: Feedback successfully stored (no content).
+        400:
+            description: Invalid request body.
     """
     data = request.get_json()
     review_text, prediction, isPredictionCorrect = data.get('reviewText'), data.get('prediction'), data.get('isPredictionCorrect')
@@ -196,8 +250,28 @@ EVENT_TO_COUNTER = {
 @app.route("/log-metric", methods=["POST"])
 def log_metric():
     """
-    Receive a frontend event and increment the corresponding counter.
-    Expected JSON body: { "event": "<event_name>" }
+    Log frontend events for analytics and monitoring.
+
+    Summary:
+        Receives a frontend event and increments the appropriate Prometheus counter.
+
+    Parameters:
+        - in: body
+          name: event
+          required: true
+          schema:
+              type: object
+              properties:
+                  event:
+                      type: string
+                      enum: ["frontend_submit_clicked", "frontend_prediction_result", "frontend_prediction_error", "frontend_review_started"]
+                      description: The name of the frontend event.
+
+    Responses:
+        204:
+            description: Event successfully logged.
+        400:
+            description: Unknown or missing event name.
     """
     data = request.get_json()
     event = data.get('event')
@@ -216,7 +290,21 @@ def log_metric():
 @app.route("/metrics")
 def metrics():
     """
-    Endpoint to expose Prometheus metrics
+    Expose Prometheus metrics for scraping.
+
+    Summary:
+        Returns all service metrics in Prometheus text format.
+
+    Parameters:
+        None
+
+    Responses:
+        200:
+            description: Prometheus-formatted metrics output.
+            content:
+                text/plain:
+                    schema:
+                        type: string
     """
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 

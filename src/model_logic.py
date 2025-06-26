@@ -34,4 +34,4 @@ class ModelLogic:
         processed_review = preprocessing._text_process(review)
         processed_input = self.cv.transform([" ".join(processed_review)]).toarray()
         prediction = self.classifier.predict(processed_input)[0]
-        return int(prediction)
+        return len(processed_review), int(sum([sum(row) for row in processed_input])), int(prediction)
