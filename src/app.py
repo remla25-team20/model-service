@@ -9,7 +9,6 @@ import requests
 import fcntl
 
 MODEL_SERVICE_VERSION = os.getenv("MODEL_SERVICE_VERSION", "unknown")
-GITHUB_PAT = os.getenv("GITHUB_PAT", None)
 USER_FEEDBACK_DIR = '/mnt/shared/user-feedback-data'
 USER_FEEDBACK_PATH = f'{USER_FEEDBACK_DIR}/user_feedback.csv'
 
@@ -60,8 +59,7 @@ model_memory_rss_bytes = Gauge(
 # Flask application
 # ──────────────────────────
 
-model = ModelLogic()
-
+models = {}
 app = Flask(__name__)
 
 def init_data():
@@ -70,13 +68,9 @@ def init_data():
 
     def fetch_releases():
         url = "https://api.github.com/repos/remla25-team20/model-training/releases"
-        
-        if GITHUB_PAT is None:
-            raise Exception("GITHUB_PAT environment variable is not set.")
 
         headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {GITHUB_PAT}",
             "X-GitHub-Api-Version": "2022-11-28",
         }
         resp = requests.get(url, headers=headers)
@@ -86,12 +80,15 @@ def init_data():
         
         releases = resp.json()
         version = [release['tag_name'] for release in releases]
+
+        print(f'got model releases from GH: {version}')
+
         url_models = [release['assets'][0]['browser_download_url'] for release in releases if release['assets']]
         url_cvs = [release['assets'][1]['browser_download_url'] for release in releases if len(release['assets']) > 1]
         return zip(version, url_models, url_cvs)
 
-    models = list(fetch_releases())
-    for version, url_model, url_cv in models:
+    fetched_models = list(fetch_releases())
+    for version, url_model, url_cv in fetched_models:
 
         target_dir = f"/mnt/shared/models/{version}/"
 
@@ -109,63 +106,18 @@ def init_data():
     
         _download_file(url_cv, target_dir + fname_cv)
         _download_file(url_model, target_dir + fname_model)
-        
-    latest = f"/mnt/shared/models/{models[0][0]}/"
-    
-    model.set_classifier_path(latest + fname_model)
-    model.set_cv_path(latest + fname_cv)
-    
-    model.initialize_models()
+
+        model = ModelLogic()
+        latest = f"/mnt/shared/models/{fetched_models[0][0]}/"
+        model.set_classifier_path(latest + fname_model)
+        model.set_cv_path(latest + fname_cv)
+        model.initialize_models()
+        models[version] = model
     return
 
-@app.route("/set-model", methods=["POST"])
-def set_model():
-    """
-    Switch the model version used by the service.
-
-    Summary:
-        Updates the model version based on the provided version parameter.
-
-    Parameters:
-        - in: body
-            name: version
-            required: true
-            schema:
-                type: object
-                properties:
-                    version:
-                        type: string
-                        description: The version of the model to switch to.
-
-    Responses:
-        200:
-            description: Successfully switched to the specified model version.
-        400:
-            description: Missing or invalid version parameter.
-        404:
-            description: Model version not found.
-        500:
-            description: Failed to initialize the model with the new version.
-    """
-    data = request.get_json()
-    version = data.get('version')
-    if not version:
-        return jsonify({"error": "Version parameter is required"}), 400
-
-    target_dir = f"/mnt/shared/models/{version}/"
-    if not os.path.exists(target_dir):
-        return jsonify({"error": f"Model version {version} not found"}), 404
-
-    fname_cv = "Sentiment_Analysis_Preprocessor.joblib"
-    fname_model = "Sentiment_Analysis_Model.joblib"
-
-    model.set_classifier_path(target_dir + fname_model)
-    model.set_cv_path(target_dir + fname_cv)
-    if not model.initialize_models():
-        return jsonify({"error": "Failed to initialize model"}), 500
-
-    app.logger.info(f"Switched to model version {version}")
-    return jsonify({"message": f"Switched to model version {version}"})
+@app.route("/model-versions", methods=["GET"])
+def get_model_versions():
+    return jsonify(modelVersions=list(models.keys()))
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -192,10 +144,13 @@ def predict():
 
     start = time.time()
     review = request.args['review']
+    model_version = request.args['modelVersion']
+    app.logger.debug(f"/predict: MODEL_VERSION={model_version}")
     print(f"The review is {review}")
     print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
-    prediction = model.predict(review)   
+    prediction = models[model_version].predict(review)
+    app.logger.debug(f"the prediction using the selected model version is {prediction}")
     app.logger.debug(f'prediction={prediction}')
     request_latency_seconds.labels(
         model_service_version=MODEL_SERVICE_VERSION, 
