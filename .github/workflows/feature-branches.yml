@@ -1,4 +1,4 @@
-name: CI and create feature tags
+name: Create feature tags
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 jobs:
   create-branch-tag:
     runs-on: ubuntu-24.04
-    needs: ci
     
     outputs:
       version: ${{ steps.feature-version.outputs.version }}
