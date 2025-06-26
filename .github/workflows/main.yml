@@ -23,7 +23,7 @@ jobs:
         id: bump-prerelease
         run: |
           OLD_VERSION=$(poetry version --short)
-          NEW_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION)
+          NEW_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION rc)
           poetry version $NEW_VERSION
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
