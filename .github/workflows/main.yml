@@ -22,7 +22,7 @@ jobs:
       - name: Bump pre-release version
         id: bump-prerelease
         run: |
-          OLD_VERSION=$(poetry version --short)
+          OLD_VERSION=$(poetry version --short | sed 's/+/-/')
           NEW_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION rc)
           poetry version $NEW_VERSION
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT

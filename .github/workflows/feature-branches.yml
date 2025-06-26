@@ -37,7 +37,7 @@ jobs:
       - name: Create new tag
         id: feature-version
         run: |
-          OLD_VERSION=$(poetry version --short)
+          OLD_VERSION=$(poetry version --short | sed 's/+/-/')
           FEATURE_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION ${{ steps.branch.outputs.branch }})
           poetry version $(echo $FEATURE_VERSION | sed 's/-/+/')    # PEP440 compliance
           echo "version=$FEATURE_VERSION" >> $GITHUB_OUTPUT

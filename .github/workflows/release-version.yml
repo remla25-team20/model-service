@@ -54,7 +54,7 @@ jobs:
       - name: Bump to next pre-patch version
         id: pre-patch
         run: |
-          OLD_VERSION=$(poetry version --short)
+          OLD_VERSION=$(poetry version --short | sed 's/+/-/')
           NEW_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION rc)
           poetry version $NEW_VERSION
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
