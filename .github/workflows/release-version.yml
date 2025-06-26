@@ -29,7 +29,8 @@ jobs:
       - name: Release version
         id: release
         run: |
-          NEW_VERSION=$(poetry version ${{ github.event.inputs.release_type }})
+          NEW_VERSION=$(poetry version ${{ github.event.inputs.release_type }} --short)
+          echo "new version is $NEW_VERSION"
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Commit release bump and also tag
