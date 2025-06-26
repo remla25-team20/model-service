@@ -1,0 +1,11 @@
+name: Manual Release for Git Tag Pushes
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+", "v[0-9]+.[0-9]+.[0-9]+-**"]
+jobs:
+  release:
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
+

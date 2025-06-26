@@ -1,0 +1,67 @@
+name: Bump prerelease version on main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create-release-candidate:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.bump-prerelease.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+          
+      - name: Make version calculation script executable
+        run: |
+          chmod +x scripts/generate_new_version.sh
+          
+      - name: Get prior tag to main
+        id: prior-tag
+        run: |
+          PRIOR_COMMIT=$(git rev-parse HEAD^)
+          TAG=$(git tag --points-at $PRIOR_COMMIT | sort -r | head -n 1)
+          if [[ -z "$TAG" ]]; then 
+          echo "No prior tag found. Defaulting to Poetry tag..."
+          TAG=$(poetry version --short | sed 's/+/-/')
+          fi
+          echo "version=$TAG" >> $GITHUB_OUTPUT
+          
+      - name: Bump pre-release version
+        id: bump-prerelease
+        run: |
+          OLD_VERSION=${{ steps.prior-tag.outputs.version }}
+          NEW_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION rc)
+          poetry version $NEW_VERSION
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Commit pre-release bump and also tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "bump pre-release version to ${{ steps.bump-prerelease.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git tag ${{ steps.bump-prerelease.outputs.version }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          tags: true
+
+  publish-release-candidate:
+    needs: create-release-candidate
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.create-release-candidate.outputs.version }}
+    secrets: inherit
+

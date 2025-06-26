@@ -1,0 +1,66 @@
+name: Create feature tags
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  create-branch-tag:
+    runs-on: ubuntu-24.04
+    
+    outputs:
+      version: ${{ steps.feature-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+      - name: Make version calculation script executable
+        run: |
+          chmod +x ./scripts/generate_new_version.sh
+      
+      - name: Extract branch name
+        id: branch
+        run: |
+          # Extract PR source branch name and sanitize
+          RAW_BRANCH="${{ github.head_ref }}"
+          echo "$RAW_BRANCH"
+          SANITIZED_BRANCH=$(git rev-parse --abbrev-ref HEAD | tr '/' '-')
+          echo "$SANITIZED_BRANCH"
+          echo "branch=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Create new tag
+        id: feature-version
+        run: |
+          OLD_VERSION=$(poetry version --short | sed 's/+/-/')
+          FEATURE_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION ${{ steps.branch.outputs.branch }})
+          poetry version $(echo $FEATURE_VERSION | sed 's/-/+/')    # PEP440 compliance
+          echo "version=$FEATURE_VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Commit pre-release bump and also tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "bump feature branch version to ${{ steps.feature-version.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git tag ${{ steps.feature-version.outputs.version }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          tags: true
+  
+  publish-branch-prerelease:
+    needs: create-branch-tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.create-branch-tag.outputs.version }}
+    secrets: inherit
+
