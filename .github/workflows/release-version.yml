@@ -1,0 +1,90 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Which type of release?'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  create-release:
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    outputs:
+      release-version: ${{ steps.release.outputs.version }}
+      pre-patch-version: ${{ steps.pre-patch.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+      - name: Release version
+        id: release
+        run: |
+          NEW_VERSION=$(poetry version ${{ github.event.inputs.release_type }})
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Commit release bump and also tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "bump ${{ github.event.inputs.release_type }} version to ${{ steps.release.outputs.version }}" || echo "No changes to commit"
+          git tag ${{ steps.release.outputs.version }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          tags: true
+          
+      - name: Make version calculation script executable
+        run: |
+          chmod +x scripts/generate_new_version.sh
+          
+      - name: Bump to next pre-patch version
+        id: pre-patch
+        run: |
+          OLD_VERSION=$(poetry version --short)
+          NEW_VERSION=$(./scripts/generate_new_version.sh $OLD_VERSION rc)
+          poetry version $NEW_VERSION
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Commit pre-patch bump and also tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "bump pre-patch version to ${{ steps.pre-patch.outputs.version }}" || echo "No changes to commit"
+          git tag ${{ steps.pre-patch.outputs.version }}
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+          tags: true
+
+  publish-release:
+    needs: create-release
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.create-release.outputs.release-version }}
+    secrets: inherit
+  
+  publish-pre-patch:
+    needs: create-release
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.create-release.outputs.pre-patch-version }}
+    secrets: inherit
+
