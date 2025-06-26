@@ -71,40 +71,65 @@ model_memory_rss_bytes = Gauge(
 # Flask application
 # ──────────────────────────
 
-model = ModelLogic()
-
+models = {}
 app = Flask(__name__)
 
-
-def init_data(version):
-    url_cv = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Preprocessor.joblib"
-    url_model = f"https://github.com/remla25-team20/model-training/releases/download/{version}/Sentiment_Analysis_Model.joblib"
-    
-    target_dir = f"/mnt/shared/models/{version}/"
+def init_data():
     fname_cv = "Sentiment_Analysis_Preprocessor.joblib"
     fname_model = "Sentiment_Analysis_Model.joblib"
-    
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-        
-    def _download_file(url, target):
-        if os.path.isfile(target):
-            return
-        resp = requests.get(url)
+
+    def fetch_releases():
+        url = "https://api.github.com/repos/remla25-team20/model-training/releases"
+
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        resp = requests.get(url, headers=headers)
+
         if resp.status_code != 200:
-            raise FileNotFoundError(f"Could not download file at {url}")
-        with open(target, "wb+") as f:
-            f.write(resp.content)
+            raise Exception(f"Failed to fetch releases: {resp.status_code}")
+        
+        releases = resp.json()
+        version = [release['tag_name'] for release in releases]
+
+        print(f'got model releases from GH: {version}')
+
+        url_models = [release['assets'][0]['browser_download_url'] for release in releases if release['assets']]
+        url_cvs = [release['assets'][1]['browser_download_url'] for release in releases if len(release['assets']) > 1]
+        return zip(version, url_models, url_cvs)
+
+    fetched_models = list(fetch_releases())
+    for version, url_model, url_cv in fetched_models:
+
+        target_dir = f"/mnt/shared/models/{version}/"
+
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
+        
+        def _download_file(url, target):
+            if os.path.isfile(target):
+                return
+            resp = requests.get(url)
+            if resp.status_code != 200:
+                raise FileNotFoundError(f"Could not download file at {url}")
+            with open(target, "wb+") as f:
+                f.write(resp.content)
     
-    _download_file(url_cv, target_dir + fname_cv)
-    _download_file(url_model, target_dir + fname_model)
-    
-    model.set_classifier_path(target_dir + fname_model)
-    model.set_cv_path(target_dir + fname_cv)
-    
-    model.initialize_models()
+        _download_file(url_cv, target_dir + fname_cv)
+        _download_file(url_model, target_dir + fname_model)
+
+        model = ModelLogic()
+        latest = f"/mnt/shared/models/{fetched_models[0][0]}/"
+        model.set_classifier_path(latest + fname_model)
+        model.set_cv_path(latest + fname_cv)
+        model.initialize_models()
+        models[version] = model
     return
 
+@app.route("/model-versions", methods=["GET"])
+def get_model_versions():
+    return jsonify(modelVersions=list(models.keys()))
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -141,12 +166,14 @@ def predict():
 
     start = time.time()
     review = request.args['review']
+    model_version = request.args['modelVersion']
+    app.logger.debug(f"/predict: MODEL_VERSION={model_version}")
     print(f"The review is {review}")
     print(f"The review datatype is {type(review)}")
     app.logger.debug(f'review={review}')
-    
-    wc_raw, wc_encoded, prediction = model.predict(review)   
-    
+
+    wc_raw, wc_encoded, prediction = models[model_version].predict(review)   
+ 
     app.logger.debug(f'prediction={prediction}')
     
     # Record metrics
@@ -295,11 +322,10 @@ def _resource_monitor():
             app_version='undefined'
             ).set(proc.memory_info().rss)
         time.sleep(5)
-        
+
 threading.Thread(target=_resource_monitor, daemon=True).start()
 
 if __name__ == "__main__":
-    version = sys.argv[1] if len(sys.argv) > 1 else "v0.1.6-beta"
-    init_data(version)
+    init_data()
     app.run(host="0.0.0.0", port=8080, debug=True)
 
